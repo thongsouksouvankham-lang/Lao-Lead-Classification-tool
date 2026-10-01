@@ -10,7 +10,7 @@ import pandas as pd
 import phonenumbers
 import streamlit as st
 
-# Attempt optional library imports with safe fallbacks
+# Safe import for fuzzy matching
 try:
     from rapidfuzz import fuzz
     HAS_RAPIDFUZZ = True
@@ -43,10 +43,7 @@ FB_KEYWORDS = {
 
 # --- Helper Functions ---
 def normalize_la_phone(phone: Any) -> str:
-    """
-    Standardizes Laos phone numbers to a clean national number string 
-    (stripping country code +856, leading zeros, and formatting characters).
-    """
+    """Standardizes Laos phone numbers into a clean national format (+856)."""
     if pd.isna(phone) or not phone:
         return ""
     
@@ -66,7 +63,7 @@ def normalize_la_phone(phone: Any) -> str:
     return digits if 7 <= len(digits) <= 10 else ""
 
 def is_fb_category(category: Any) -> bool:
-    """Checks if the category string matches any EN, LO, or ZH F&B keyword."""
+    """Checks if category matches F&B keywords (EN, LO, ZH)."""
     if pd.isna(category) or not category:
         return False
     
@@ -78,9 +75,7 @@ def is_fb_category(category: Any) -> bool:
     return False
 
 def classify_and_dedupe(scraped_df: pd.DataFrame, master_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
-    """
-    Cleans, classifies F&B status, and deduplicates against master data.
-    """
+    """Cleans, classifies F&B status, and deduplicates against Salesforce Master CRM Data."""
     df = scraped_df.copy()
     
     grid_col = next((c for c in df.columns if "grid" in c.lower() or "place_id" in c.lower()), None)
@@ -136,10 +131,22 @@ def classify_and_dedupe(scraped_df: pd.DataFrame, master_df: Optional[pd.DataFra
 
 # --- Streamlit UI Setup ---
 st.title("🍲 LA Lead Classifier — Nationwide Laos")
-st.markdown("Clean, classify, and deduplicate scraped F&B leads against master data.")
+st.markdown("Clean, classify, and deduplicate scraped F&B leads against Salesforce master data.")
 
 st.sidebar.header("📁 Upload Datasets")
+
+# Step 1: Upload Scraped Leads
+st.sidebar.subheader("Step 1 · Leads File (Salesforce)")
+st.sidebar.markdown(
+    "🔗 [Download Scraped Leads Report](https://deliveryhero.lightning.force.com/lightning/r/Report/00ObO00000ABN0LUAX/view)"
+)
 scraped_file = st.sidebar.file_uploader("Upload Scraped Leads (CSV/XLSX)", type=["csv", "xlsx"])
+
+# Step 2: Upload CRM Master Database Export
+st.sidebar.subheader("Step 2 · CRM Export (Salesforce)")
+st.sidebar.markdown(
+    "🔗 [Download Master CRM Export](https://deliveryhero.lightning.force.com/lightning/r/Report/00ObO00000ABNhtUAH/view?queryScope=userFolders)"
+)
 master_file = st.sidebar.file_uploader("Upload Master Dataset (Optional CSV/XLSX)", type=["csv", "xlsx"])
 
 if scraped_file:
@@ -148,7 +155,7 @@ if scraped_file:
     if master_file:
         master_df = pd.read_csv(master_file) if master_file.name.endswith(".csv") else pd.read_excel(master_file)
 
-    st.subheader("Raw Data Preview")
+    st.subheader("Raw Scraped Data Preview")
     st.dataframe(scraped_df.head(5), use_container_width=True)
 
     if st.button("⚡ Process & Classify Leads", type="primary"):
@@ -179,4 +186,4 @@ if scraped_file:
         st.subheader("Classified Results Preview")
         st.dataframe(processed_df, use_container_width=True)
 else:
-    st.info("Please upload a scraped dataset in the sidebar to begin.")
+    st.info("Please upload your scraped dataset in the sidebar to begin.")
